@@ -165,60 +165,78 @@ const App: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col overflow-y-auto">
+    <div className="h-screen bg-slate-50 flex flex-col overflow-hidden">
       {renderConfetti()}
       
-      {/* Header */}
-      <header className="bg-white border-b border-slate-200 px-4 py-3 sticky top-0 z-20">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      {/* Header - Fixed Height */}
+      <header className="bg-white border-b border-slate-200 px-4 py-3 z-20 shrink-0 shadow-sm">
+        <div className="max-w-6xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎯</span>
-            <span className="font-bold text-slate-800 hidden sm:block">
+            <span className="font-bold text-slate-800 text-lg hidden sm:block">
               {TRANSLATIONS[language].title}
             </span>
           </div>
           {gameState === GameState.PLAYING && (
-            <Timer startTime={startTime} endTime={endTime} />
+            <div className="absolute left-1/2 transform -translate-x-1/2">
+               <Timer startTime={startTime} endTime={endTime} />
+            </div>
           )}
           {gameState === GameState.PLAYING && (
-            <Button variant="outline" onClick={() => setGameState(GameState.SETUP)} className="!py-1 !px-3 !text-sm">
+            <Button variant="outline" onClick={() => setGameState(GameState.SETUP)} className="!py-1.5 !px-3 !text-xs sm:!text-sm">
               {TRANSLATIONS[language].quit}
             </Button>
           )}
         </div>
       </header>
 
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-4xl mx-auto p-4 flex flex-col items-center">
-        {gameState === GameState.SETUP || gameState === GameState.LOADING ? (
-          <div className="w-full flex flex-col items-center mt-8">
-            <SetupForm 
-              onStart={handleStartGame} 
-              isLoading={gameState === GameState.LOADING}
-              language={language}
-              setLanguage={setLanguage}
-            />
-            <Leaderboard entries={leaderboard} language={language} />
+      {/* Main Content - Scrollable */}
+      <main className="flex-1 w-full max-w-6xl mx-auto p-4 sm:p-6 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-200">
+        
+        {/* Setup & Loading State */}
+        {(gameState === GameState.SETUP || gameState === GameState.LOADING) && (
+          <div className="w-full h-full flex flex-col lg:flex-row items-center lg:items-start justify-center gap-6 lg:gap-12 py-2">
+            {/* Form Section */}
+            <div className="w-full max-w-lg flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <SetupForm 
+                onStart={handleStartGame} 
+                isLoading={gameState === GameState.LOADING}
+                language={language}
+                setLanguage={setLanguage}
+              />
+            </div>
+            
+            {/* Leaderboard Section - Wraps to bottom on mobile, side on desktop */}
+            <div className="w-full max-w-sm animate-in fade-in slide-in-from-right-4 duration-700 delay-100">
+               <Leaderboard entries={leaderboard} language={language} />
+               <div className="mt-4 text-center lg:text-left text-xs text-slate-400 max-w-xs mx-auto lg:mx-0 leading-relaxed">
+                  <p>Tips: Customize roles for higher accuracy. The AI adapts the phrases based on the industry and personas you choose!</p>
+               </div>
+            </div>
           </div>
-        ) : (
-          <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
-            <div className="mb-4 text-center">
-              <h2 className="text-xl font-bold text-slate-800">{settings.topic}</h2>
-              <div className="text-slate-500 text-sm flex gap-2 justify-center flex-wrap">
-                 {settings.industry && <span>{settings.industry} •</span>}
-                 {settings.roles.length > 0 ? (
-                   <span>{settings.roles.join(', ')}</span>
-                 ) : (
-                   <span>General</span>
+        )}
+
+        {/* Playing State */}
+        {(gameState === GameState.PLAYING || gameState === GameState.WON) && (
+          <div className="flex flex-col items-center justify-center min-h-full pb-8 animate-in zoom-in-95 duration-300">
+            <div className="mb-4 sm:mb-6 text-center">
+              <h2 className="text-xl sm:text-2xl font-bold text-slate-800 mb-1">{settings.topic}</h2>
+              <div className="text-slate-500 text-xs sm:text-sm flex gap-2 justify-center flex-wrap items-center">
+                 {settings.industry && <span className="font-medium bg-slate-100 px-2 py-0.5 rounded text-slate-600">{settings.industry}</span>}
+                 {settings.roles.length > 0 && <span className="text-slate-300">•</span>}
+                 {settings.roles.length > 0 && (
+                   <span className="italic">{settings.roles.join(', ')}</span>
                  )}
               </div>
             </div>
             
-            <BingoBoard 
-              grid={grid} 
-              onCellClick={handleCellClick} 
-              winningIndices={winningIndices}
-            />
+            <div className="w-full max-w-xl">
+               <BingoBoard 
+                 grid={grid} 
+                 onCellClick={handleCellClick} 
+                 winningIndices={winningIndices}
+               />
+            </div>
           </div>
         )}
       </main>
