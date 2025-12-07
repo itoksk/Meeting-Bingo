@@ -4,6 +4,50 @@ import { MeetingAnalysis, Language } from "../types";
 const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 const MODEL_NAME = "gemini-3-pro-preview";
 
+// Helper to clean JSON string from Markdown code blocks and extraneous text
+const cleanJsonString = (text: string): string => {
+  if (!text) return "[]";
+  
+  // 1. Try to extract from markdown code blocks first
+  const match = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
+  if (match) {
+    return match[1].trim();
+  }
+
+  // 2. If no code blocks, look for the first '[' or '{' and the last ']' or '}'
+  const firstBracket = text.indexOf('[');
+  const firstBrace = text.indexOf('{');
+  
+  let startIndex = -1;
+  let endIndex = -1;
+
+  // Determine if we are looking for an array or an object
+  // (We prioritize the one that appears first)
+  if (firstBracket !== -1 && firstBrace !== -1) {
+    startIndex = Math.min(firstBracket, firstBrace);
+  } else if (firstBracket !== -1) {
+    startIndex = firstBracket;
+  } else if (firstBrace !== -1) {
+    startIndex = firstBrace;
+  }
+
+  if (startIndex !== -1) {
+    // Determine the end index based on what we started with
+    // Simple heuristic: look for the last occurrence of the closing counterpart
+    // This isn't a full parser, but robust enough for standard LLM outputs
+    const lastBracket = text.lastIndexOf(']');
+    const lastBrace = text.lastIndexOf('}');
+    endIndex = Math.max(lastBracket, lastBrace);
+    
+    if (endIndex > startIndex) {
+      return text.substring(startIndex, endIndex + 1);
+    }
+  }
+
+  // 3. Fallback: return original text and hope for the best
+  return text.trim();
+};
+
 // Fallback phrases by language
 const FALLBACKS: Record<Language, string[]> = {
   en: [
@@ -78,11 +122,7 @@ export const generateBingoPhrases = async (topic: string, industry: string, role
       }
     });
 
-    const jsonText = response.text;
-    if (!jsonText) {
-      throw new Error("No text returned from Gemini");
-    }
-
+    const jsonText = cleanJsonString(response.text || "[]");
     const phrases = JSON.parse(jsonText) as string[];
     
     // Fallbacks based on language
@@ -119,7 +159,8 @@ export const getRoleSuggestions = async (topic: string, industry: string, langua
       }
     });
 
-    return JSON.parse(response.text || "[]") as string[];
+    const jsonText = cleanJsonString(response.text || "[]");
+    return JSON.parse(jsonText) as string[];
   } catch (error) {
     console.error("Error fetching roles:", error);
     return language === 'ja' 
@@ -165,7 +206,8 @@ export const analyzeMeetingResult = async (
       }
     });
 
-    const data = JSON.parse(response.text || "{}");
+    const jsonText = cleanJsonString(response.text || "{}");
+    const data = JSON.parse(jsonText);
     return {
       boredomScore: data.boredomScore || 50,
       commentary: data.commentary || (language === 'ja' ? "それは退屈な会議でしたね。" : "That sounds like a meeting that could have been an email.")
