@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { GameState, GameSettings, BingoCellData, LeaderboardEntry, MeetingAnalysis } from './types';
+import { GameState, GameSettings, BingoCellData, LeaderboardEntry, MeetingAnalysis, Language } from './types';
 import { generateBingoPhrases, analyzeMeetingResult } from './services/geminiService';
 import { SetupForm } from './components/SetupForm';
 import { BingoBoard } from './components/BingoBoard';
@@ -7,6 +7,7 @@ import { Timer } from './components/Timer';
 import { WinModal } from './components/WinModal';
 import { Leaderboard } from './components/Leaderboard';
 import { Button } from './components/Button';
+import { TRANSLATIONS } from './translations';
 
 // Win patterns (rows, cols, diagonals)
 const WIN_PATTERNS = [
@@ -16,8 +17,9 @@ const WIN_PATTERNS = [
 ];
 
 const App: React.FC = () => {
+  const [language, setLanguage] = useState<Language>('en');
   const [gameState, setGameState] = useState<GameState>(GameState.SETUP);
-  const [settings, setSettings] = useState<GameSettings>({ topic: '', roles: [], industry: '' });
+  const [settings, setSettings] = useState<GameSettings>({ topic: '', roles: [], industry: '', language: 'en' });
   const [grid, setGrid] = useState<BingoCellData[]>([]);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [endTime, setEndTime] = useState<number | null>(null);
@@ -40,7 +42,7 @@ const App: React.FC = () => {
     setGameState(GameState.LOADING);
 
     try {
-      const phrases = await generateBingoPhrases(newSettings.topic, newSettings.industry, newSettings.roles);
+      const phrases = await generateBingoPhrases(newSettings.topic, newSettings.industry, newSettings.roles, newSettings.language);
       
       const newGrid: BingoCellData[] = phrases.map((text, index) => ({
         id: index < 12 ? index : index + 1, // Shift index after center
@@ -52,7 +54,7 @@ const App: React.FC = () => {
       // Insert FREE space at index 12
       newGrid.splice(12, 0, {
         id: 12,
-        text: "FREE SPACE",
+        text: "FREE",
         checked: true,
         isFree: true
       });
@@ -128,7 +130,7 @@ const App: React.FC = () => {
       .filter(cell => pattern.includes(cell.id) && !cell.isFree)
       .map(cell => cell.text);
 
-    analyzeMeetingResult(settings.topic, winningPhrases, timeElapsed)
+    analyzeMeetingResult(settings.topic, winningPhrases, timeElapsed, settings.language)
       .then(result => setAnalysis(result))
       .catch(err => console.error("Analysis failed", err));
 
@@ -171,14 +173,16 @@ const App: React.FC = () => {
         <div className="max-w-4xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-2">
             <span className="text-2xl">🎯</span>
-            <span className="font-bold text-slate-800 hidden sm:block">Meeting Bingo</span>
+            <span className="font-bold text-slate-800 hidden sm:block">
+              {TRANSLATIONS[language].title}
+            </span>
           </div>
           {gameState === GameState.PLAYING && (
             <Timer startTime={startTime} endTime={endTime} />
           )}
           {gameState === GameState.PLAYING && (
             <Button variant="outline" onClick={() => setGameState(GameState.SETUP)} className="!py-1 !px-3 !text-sm">
-              Quit
+              {TRANSLATIONS[language].quit}
             </Button>
           )}
         </div>
@@ -188,8 +192,13 @@ const App: React.FC = () => {
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 flex flex-col items-center">
         {gameState === GameState.SETUP || gameState === GameState.LOADING ? (
           <div className="w-full flex flex-col items-center mt-8">
-            <SetupForm onStart={handleStartGame} isLoading={gameState === GameState.LOADING} />
-            <Leaderboard entries={leaderboard} />
+            <SetupForm 
+              onStart={handleStartGame} 
+              isLoading={gameState === GameState.LOADING}
+              language={language}
+              setLanguage={setLanguage}
+            />
+            <Leaderboard entries={leaderboard} language={language} />
           </div>
         ) : (
           <div className="w-full flex flex-col items-center animate-in fade-in duration-500">
@@ -220,6 +229,7 @@ const App: React.FC = () => {
           onPlayAgain={handlePlayAgain}
           topic={settings.topic}
           analysis={analysis}
+          language={language}
         />
       )}
     </div>

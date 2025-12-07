@@ -1,14 +1,18 @@
 import React, { useState } from 'react';
-import { GameSettings } from '../types';
+import { GameSettings, Language } from '../types';
 import { Button } from './Button';
 import { getRoleSuggestions } from '../services/geminiService';
+import { TRANSLATIONS } from '../translations';
 
 interface SetupFormProps {
   onStart: (settings: GameSettings) => void;
   isLoading: boolean;
+  language: Language;
+  setLanguage: (lang: Language) => void;
 }
 
-export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
+export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading, language, setLanguage }) => {
+  const t = TRANSLATIONS[language];
   const [topic, setTopic] = useState('');
   const [industry, setIndustry] = useState('');
   
@@ -21,7 +25,7 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
   const handleGetSuggestions = async () => {
     if (!topic) return;
     setIsSuggestingRoles(true);
-    const suggestions = await getRoleSuggestions(topic, industry);
+    const suggestions = await getRoleSuggestions(topic, industry, language);
     setSuggestedRoles(suggestions);
     setIsSuggestingRoles(false);
   };
@@ -47,27 +51,41 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (topic.trim()) {
-      onStart({ topic, roles, industry });
+      onStart({ topic, roles, industry, language });
     }
   };
 
   return (
-    <div className="w-full max-w-lg mx-auto p-8 bg-white rounded-3xl shadow-xl border border-slate-100">
-      <div className="text-center mb-8">
-        <h1 className="text-3xl font-bold text-slate-800 mb-2">Meeting Bingo</h1>
-        <p className="text-slate-500">Turn boring meetings into a game with Gemini 3.</p>
+    <div className="w-full max-w-lg mx-auto p-8 bg-white rounded-3xl shadow-xl border border-slate-100 relative">
+      {/* Language Selector */}
+      <div className="absolute top-4 right-4">
+        <select
+          value={language}
+          onChange={(e) => setLanguage(e.target.value as Language)}
+          className="bg-slate-50 border border-slate-200 text-slate-600 text-xs rounded-lg px-2 py-1 outline-none focus:border-indigo-500"
+        >
+          <option value="en">English</option>
+          <option value="ja">日本語</option>
+          <option value="de">Deutsch</option>
+          <option value="fr">Français</option>
+        </select>
+      </div>
+
+      <div className="text-center mb-8 pt-4">
+        <h1 className="text-3xl font-bold text-slate-800 mb-2">{t.title}</h1>
+        <p className="text-slate-500">{t.subtitle}</p>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label htmlFor="topic" className="block text-sm font-medium text-slate-700 mb-1">
-            Meeting Topic <span className="text-red-500">*</span>
+            {t.topicLabel} <span className="text-red-500">*</span>
           </label>
           <input
             type="text"
             id="topic"
             required
-            placeholder="e.g. Q3 Budget Review"
+            placeholder={t.topicPlaceholder}
             value={topic}
             onChange={(e) => setTopic(e.target.value)}
             className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
@@ -76,12 +94,12 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
 
         <div>
           <label htmlFor="industry" className="block text-sm font-medium text-slate-700 mb-1">
-            Industry (Optional)
+            {t.industryLabel}
           </label>
           <input
             type="text"
             id="industry"
-            placeholder="e.g. Tech, Healthcare, Finance"
+            placeholder={t.industryPlaceholder}
             value={industry}
             onChange={(e) => setIndustry(e.target.value)}
             className="w-full px-4 py-3 rounded-lg border border-slate-200 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 transition-all outline-none"
@@ -91,7 +109,7 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
         <div>
           <div className="flex justify-between items-center mb-2">
             <label className="block text-sm font-medium text-slate-700">
-              Participants (Roles/Personas)
+              {t.rolesLabel}
             </label>
             <button
               type="button"
@@ -100,9 +118,9 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
               className="text-xs text-indigo-600 font-semibold hover:text-indigo-800 disabled:opacity-50 flex items-center gap-1"
             >
               {isSuggestingRoles ? (
-                 <span className="animate-pulse">Thinking...</span>
+                 <span className="animate-pulse">{t.thinking}</span>
               ) : (
-                <>✨ Suggest Roles</>
+                <>✨ {t.suggestRoles}</>
               )}
             </button>
           </div>
@@ -124,7 +142,7 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
 
           <input
             type="text"
-            placeholder={roles.length === 0 ? "Type specific roles (Press Enter) or click Suggest" : "Add another role..."}
+            placeholder={roles.length === 0 ? t.addRolePlaceholder : "..."}
             value={customRole}
             onChange={(e) => setCustomRole(e.target.value)}
             onKeyDown={addCustomRole}
@@ -133,7 +151,7 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
 
           {suggestedRoles.length > 0 && (
             <div className="mt-3 p-3 bg-slate-50 rounded-lg border border-slate-100">
-              <span className="text-xs text-slate-500 block mb-2">Suggestions (click to add):</span>
+              <span className="text-xs text-slate-500 block mb-2">{t.suggestionsLabel}</span>
               <div className="flex flex-wrap gap-2">
                 {suggestedRoles.filter(r => !roles.includes(r)).map((role) => (
                   <button
@@ -151,12 +169,12 @@ export const SetupForm: React.FC<SetupFormProps> = ({ onStart, isLoading }) => {
         </div>
 
         <Button type="submit" isLoading={isLoading} className="w-full">
-          Generate Bingo Card
+          {t.generateButton}
         </Button>
       </form>
       
       <div className="mt-6 text-center text-xs text-slate-400">
-        Powered by Gemini 3 Pro
+        {t.poweredBy}
       </div>
     </div>
   );

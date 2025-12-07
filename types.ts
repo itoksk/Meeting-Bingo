@@ -5,10 +5,13 @@ export interface BingoCellData {
   isFree: boolean;
 }
 
+export type Language = 'en' | 'ja' | 'de' | 'fr';
+
 export interface GameSettings {
   topic: string;
   roles: string[];
   industry: string;
+  language: Language;
 }
 
 export interface LeaderboardEntry {
