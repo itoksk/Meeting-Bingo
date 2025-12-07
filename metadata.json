@@ -1,0 +1,5 @@
+{
+  "name": "Meeting Bingo Generator",
+  "description": "Generate custom bingo cards based on your meeting topic using AI. Play, track time, and compete on the leaderboard.",
+  "requestFramePermissions": []
+}
